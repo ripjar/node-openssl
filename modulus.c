@@ -24,12 +24,20 @@
 #include <string.h>
 
 static napi_value
-x509_cert (napi_env env, napi_callback_info info)
+x509_cert_pub_key (napi_env env, napi_callback_info info)
 {
   size_t argc = 1, size;
   napi_value argv[argc];
   char buf[16 * 1024];
   napi_status status = napi_ok;
+
+  BIO *bio;
+  X509 *x509;
+  EVP_PKEY *evp_pubkey;
+  RSA *public_key;
+  char *n_hex, *e_hex;
+  napi_value n_val, e_val;
+  napi_value obj;
 
   if (napi_get_cb_info (env, info, &argc, argv, NULL, NULL) != napi_ok)
     {
@@ -53,14 +61,59 @@ x509_cert (napi_env env, napi_callback_info info)
       napi_throw_error (env, NULL, "Failed to copy cert into buffer");
       return NULL;
     }
-  if ((private_key = PEM_read_bio_x509 (bio, 0, 0, 0)) == NULL)
+  if ((x509 = PEM_read_bio_X509 (bio, 0, 0, 0)) == NULL)
     {
-      napi_throw_error (env, NULL, "Failed to read key from bio");
+      napi_throw_error (env, NULL, "Failed to read x509 from bio");
+      BIO_free (bio);
+      return NULL;
+    }
+  if ((evp_pubkey = X509_get_pubkey (x509)) == NULL)
+    {
+      napi_throw_error (env, NULL, "Failed to extract public key");
+      X509_free (x509);
+      BIO_free (bio);
+      return NULL;
+    }
+  if ((public_key = EVP_PKEY_get1_RSA (evp_pubkey)) == NULL)
+    {
+      napi_throw_error (env, NULL, "Faield to extract rsa key");
+      EVP_PKEY_free (evp_pubkey);
+      X509_free (x509);
       BIO_free (bio);
       return NULL;
     }
 
-  return 0;
+  n_hex = BN_bn2hex (public_key->n);
+  e_hex = BN_bn2hex (public_key->e);
+
+  RSA_free (public_key);
+  EVP_PKEY_free (evp_pubkey);
+  X509_free (x509);
+  BIO_free (bio);
+
+  status |= napi_create_string_utf8 (env, n_hex, strlen (n_hex), &n_val);
+  status |= napi_create_string_utf8 (env, e_hex, strlen (e_hex), &e_val);
+  status |= napi_create_object (env, &obj);
+
+  free (n_hex);
+  free (e_hex);
+
+  if (status != napi_ok)
+    {
+      napi_throw_error (env, NULL, "Failed to create return object");
+      return NULL;
+    }
+
+  status |= napi_set_named_property (env, obj, "n", n_val);
+  status |= napi_set_named_property (env, obj, "e", e_val);
+
+  if (status != napi_ok)
+    {
+      napi_throw_error (env, NULL, "Failed to assign properties to object");
+      return NULL;
+    }
+
+  return obj;
 }
 
 static napi_value
@@ -162,19 +215,22 @@ rsa_priv_key (napi_env env, napi_callback_info info)
 }
 
 static napi_value
-init(napi_env env, napi_value exports) {
-  napi_status status;
-  napi_value fn;
+init (napi_env env, napi_value exports) {
+  napi_value rsa_fn, x509_fn;
 
-  status = napi_create_function(env, NULL, 0, rsa_priv_key, NULL, &fn);
-  if (status != napi_ok) {
-    napi_throw_error(env, NULL, "Unable to wrap native function");
-  }
+  if (napi_create_function (env, NULL, 0, rsa_priv_key,
+                            NULL, &rsa_fn) != napi_ok)
+    napi_throw_error (env, NULL, "Unable to wrap native rsa function");
+  if (napi_create_function (env, NULL, 0, x509_cert_pub_key,
+                            NULL, &x509_fn) != napi_ok)
+    napi_throw_error (env, NULL, "Unable to wrap native x509 function");
 
-  status = napi_set_named_property(env, exports, "RSAPrivateKey", fn);
-  if (status != napi_ok) {
-    napi_throw_error(env, NULL, "Unable to populate exports");
-  }
+  if (napi_set_named_property (env, exports, "RSAPrivateKey",
+                               rsa_fn) != napi_ok)
+    napi_throw_error (env, NULL, "Unable to populate exports with rsa");
+  if (napi_set_named_property (env, exports, "X509PublicKey",
+                               x509_fn) != napi_ok)
+    napi_throw_error (env, NULL, "Unable to populate exports with x509");
 
   return exports;
 }

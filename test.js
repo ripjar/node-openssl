@@ -49,5 +49,5 @@ bBBpXSx7kyjpejndt+ico3R5MctNgiX4OqqWl9CGCe5+/I+lc1qN
 -----END RSA PRIVATE KEY-----
 `;
 
-const value = 8;
-console.log("My modulus is", modulus.RSAPrivateKey(rsakey));
+console.log("My rsa private key is", modulus.RSAPrivateKey(rsakey));
+console.log("My cert public key is", modulus.X509PublicKey(cert));
