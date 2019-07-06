@@ -1,4 +1,4 @@
-const modulus = require("./build/Release/modulus");
+const modulus = require(".");
 
 const cert = `-----BEGIN CERTIFICATE-----
 MIIC0TCCAbkCAQEwDQYJKoZIhvcNAQEFBQAwRzELMAkGA1UEBhMCR0IxEzARBgNV
@@ -49,5 +49,9 @@ bBBpXSx7kyjpejndt+ico3R5MctNgiX4OqqWl9CGCe5+/I+lc1qN
 -----END RSA PRIVATE KEY-----
 `;
 
-console.log("My rsa private key is", modulus.RSAPrivateKey(rsakey));
-console.log("My cert public key is", modulus.X509PublicKey(cert));
+try {
+  console.log("My rsa private key is", modulus.RSAPrivateKey(rsakey));
+  console.log("My cert public key is", modulus.X509PublicKey(cert));
+} catch (e) {
+  console.error ("test failed", e);
+}

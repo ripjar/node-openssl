@@ -1,9 +1,8 @@
 {
   "targets": [
     {
-      "target_name": "modulus",
-      "sources": [ "./modulus.c" ]
+      "target_name": "node_openssl",
+      "sources": [ "./main.c" ]
     }
   ]
 }
-
