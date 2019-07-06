@@ -1,5 +1,25 @@
 const modulus = require("./build/Release/modulus");
 
+const cert = `-----BEGIN CERTIFICATE-----
+MIIC0TCCAbkCAQEwDQYJKoZIhvcNAQEFBQAwRzELMAkGA1UEBhMCR0IxEzARBgNV
+BAgMCkNoZWx0ZW5oYW0xDzANBgNVBAoMBlJpcGphcjESMBAGA1UEAwwJUmlwamFy
+IENBMB4XDTE5MDQxNTEyNDgzMFoXDTQ2MDgzMTEyNDgzMFowFjEUMBIGA1UEAwwL
+SmFtZXMgTW94b24wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDNpKKs
+xlWUokSUY1XBRRHlkkz5BKnr8xtb3FPJeOElouDKZTNjF/15V4z3sz/rm3iTioJw
+5PJu3y/Yzg5X1eg4SL90QkuKlqwPHLuoGhh+38JCmsPlwlBf3bQp0TET0RogTHPJ
+i9W+66FwkOSd1PmzX5jAcFn4WtyBIISFPoRsRBeGvHEuPDsSai3fBES2kqWt/SMm
+Qeqv3B0vt14wSlCvllqtKhWQ2enghGaWDgmM9tW/HOUCH+Ajeag9W92gMrF61qxC
+rsJK5PK98jFEoE+IUcnG3e3NiOrwhXf+FYc+eejB//e1BUgcOBMvrKzEM6K1HP2P
+woPHPRfp6Ayaeq+vAgMBAAEwDQYJKoZIhvcNAQEFBQADggEBAFNGe7so0G+nZcl0
+Lr/76IWO+3U0aZVeY2lOqyhICWxqexspSvfCJB5Zs3fh/HAMGhGCz0HueLY7/zoJ
+E+sOtOx1zmqNxKGR9U8jEv578ou24atyRWmXcTY67Sld+zGES3tnJeF7VZZ0wTed
+1y3i/KxxWxxob2W7ub0K6ULu6st3upVZ0K3T20gaqJ1gfnJEKUsOFocDX4WjTo13
++NlMQw7Fhzt4rqzrRaam2y/hye/Vnvu81K+rbi8vC8bmH1lFttlXfic+0bYiLNzc
+sBbSr3qHmq2mLUtiBnAgBniIaVjBu0yssdkod3BLUwka2inUtVsynrB/rF3XUbbt
+ZsP1whw=
+-----END CERTIFICATE-----
+`;
+
 const rsakey = `-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAsOeagT/JqvjsM7BEdEcRRYGGzgnEoVfe45W0HFIePdjw2n/e
 cw2aJQ/7gj6TFoEU6+F+HmTV83uBtuUrkNEiyvFbSiQio87DnQL6ObknsNaye6u2
@@ -30,4 +50,4 @@ bBBpXSx7kyjpejndt+ico3R5MctNgiX4OqqWl9CGCe5+/I+lc1qN
 `;
 
 const value = 8;
-console.log("My modulus is", modulus.RSAPrivateKeyModulus(rsakey));
+console.log("My modulus is", modulus.RSAPrivateKey(rsakey));

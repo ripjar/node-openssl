@@ -1,7 +1,6 @@
 {
-  "name": "n-api-article",
+  "name": "rsa-modulus",
   "version": "0.1.0",
-  "description": "https://medium.com/@schahriar/n-api-and-getting-started-with-writing-c-addons-for-node-js-cf061b3eae75",
   "main": "modulus.js",
   "private": true,
   "gypfile": true,
@@ -13,5 +12,5 @@
     "node" : ">=8.4.0"
   },
   "author": "Joshua Houghton <joshua.houghton@ripjar.com",
-  "license": "GPL"
+  "license": "LGPL"
 }
