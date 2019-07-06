@@ -76,7 +76,7 @@ x509_cert_pub_key (napi_env env, napi_callback_info info)
     }
   if ((public_key = EVP_PKEY_get1_RSA (evp_pubkey)) == NULL)
     {
-      napi_throw_error (env, NULL, "Faield to extract rsa key");
+      napi_throw_error (env, NULL, "Faild to extract rsa key");
       EVP_PKEY_free (evp_pubkey);
       X509_free (x509);
       BIO_free (bio);
