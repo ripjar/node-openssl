@@ -19,8 +19,49 @@
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/bio.h>
+#include <openssl/x509.h>
 
 #include <string.h>
+
+static napi_value
+x509_cert (napi_env env, napi_callback_info info)
+{
+  size_t argc = 1, size;
+  napi_value argv[argc];
+  char buf[16 * 1024];
+  napi_status status = napi_ok;
+
+  if (napi_get_cb_info (env, info, &argc, argv, NULL, NULL) != napi_ok)
+    {
+      napi_throw_error (env, NULL, "Failed to parse arguments");
+      return NULL;
+    }
+  if (argc < 1)
+    {
+      napi_throw_error (env, NULL, "This function requires one argument");
+      return NULL;
+    }
+  if (napi_get_value_string_utf8 (env, argv[0], buf,
+				  sizeof (buf), &size) != napi_ok)
+    {
+      napi_throw_error (env, NULL, "Failed to parse string");
+      return NULL;
+    }
+
+  if ((bio = BIO_new_mem_buf (buf, size)) == NULL)
+    {
+      napi_throw_error (env, NULL, "Failed to copy cert into buffer");
+      return NULL;
+    }
+  if ((private_key = PEM_read_bio_x509 (bio, 0, 0, 0)) == NULL)
+    {
+      napi_throw_error (env, NULL, "Failed to read key from bio");
+      BIO_free (bio);
+      return NULL;
+    }
+
+  return 0;
+}
 
 static napi_value
 rsa_priv_key (napi_env env, napi_callback_info info)
@@ -41,13 +82,11 @@ rsa_priv_key (napi_env env, napi_callback_info info)
       napi_throw_error (env, NULL, "Failed to parse arguments");
       return NULL;
     }
-
   if (argc < 1)
     {
       napi_throw_error (env, NULL, "This function requires one argument");
       return NULL;
     }
-
   if (napi_get_value_string_utf8 (env, argv[0], buf,
 				  sizeof (buf), &size) != napi_ok)
     {
@@ -55,8 +94,17 @@ rsa_priv_key (napi_env env, napi_callback_info info)
       return NULL;
     }
 
-  bio = BIO_new_mem_buf (buf, size);
-  private_key = PEM_read_bio_RSAPrivateKey (bio, 0, 0, 0);
+  if ((bio = BIO_new_mem_buf (buf, size)) == NULL)
+    {
+      napi_throw_error (env, NULL, "Failed to copy key into buffer");
+      return NULL;
+    }
+  if ((private_key = PEM_read_bio_RSAPrivateKey (bio, 0, 0, 0)) == NULL)
+    {
+      napi_throw_error (env, NULL, "Failed to read key from bio");
+      BIO_free (bio);
+      return NULL;
+    }
 
   n_hex = BN_bn2hex (private_key->n);
   e_hex = BN_bn2hex (private_key->e);
