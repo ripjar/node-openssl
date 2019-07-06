@@ -1,5 +1,5 @@
 {
-  "name": "rsa-modulus",
+  "name": "node-openssl",
   "version": "0.1.0",
   "main": "modulus.js",
   "private": true,
