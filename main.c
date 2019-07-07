@@ -100,6 +100,18 @@ x509_cert_pub_key (napi_env env, napi_callback_info info)
       return NULL;
     }
 
+  if (public_key->n == NULL || public_key->e == NULL)
+    {
+      napi_throw_error (env, NULL, "One or more required values in the "
+                        "public key is null");
+      RSA_free (public_key);
+      EVP_PKEY_free (evp_pubkey);
+      X509_free (x509);
+      BIO_free (bio);
+      free (buf);
+      return NULL;
+    }
+
   n_hex = BN_bn2hex (public_key->n);
   e_hex = BN_bn2hex (public_key->e);
 
@@ -184,6 +196,19 @@ rsa_priv_key (napi_env env, napi_callback_info info)
   if ((private_key = PEM_read_bio_RSAPrivateKey (bio, 0, 0, 0)) == NULL)
     {
       napi_throw_error (env, NULL, "Failed to read key from bio");
+      BIO_free (bio);
+      free (buf);
+      return NULL;
+    }
+
+  if (private_key->n == NULL || private_key->e == NULL ||
+      private_key->d == NULL || private_key->p == NULL ||
+      private_key->q == NULL || private_key->dmp1 == NULL ||
+      private_key->dmq1 == NULL || private_key->iqmp == NULL)
+    {
+      napi_throw_error (env, NULL, "One or more required values in the "
+                        "private key is null");
+      RSA_free (private_key);
       BIO_free (bio);
       free (buf);
       return NULL;
