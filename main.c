@@ -30,7 +30,7 @@ x509_cert_pub_key (napi_env env, napi_callback_info info)
 {
   size_t argc = 1, size;
   napi_value argv[argc];
-  char buf[16 * 1024];
+  char *buf;
   napi_status status = napi_ok;
 
   BIO *bio;
@@ -51,22 +51,35 @@ x509_cert_pub_key (napi_env env, napi_callback_info info)
       napi_throw_error (env, NULL, "This function requires one argument");
       return NULL;
     }
-  if (napi_get_value_string_utf8 (env, argv[0], buf,
-				  sizeof (buf), &size) != napi_ok)
+  if (napi_get_value_string_utf8 (env, argv[0], NULL, 0, &size) != napi_ok)
     {
       napi_throw_error (env, NULL, "Failed to parse string");
+      return NULL;
+    }
+  if ((buf = malloc (++size)) == NULL)
+    {
+      napi_throw_error (env, NULL, "Failed to allocate memory");
+      return NULL;
+    }
+  if (napi_get_value_string_utf8 (env, argv[0], buf,
+				  size, &size) != napi_ok)
+    {
+      napi_throw_error (env, NULL, "Failed to parse string");
+      free (buf);
       return NULL;
     }
 
   if ((bio = BIO_new_mem_buf (buf, size)) == NULL)
     {
       napi_throw_error (env, NULL, "Failed to copy cert into buffer");
+      free (buf);
       return NULL;
     }
   if ((x509 = PEM_read_bio_X509 (bio, 0, 0, 0)) == NULL)
     {
       napi_throw_error (env, NULL, "Failed to read x509 from bio");
       BIO_free (bio);
+      free (buf);
       return NULL;
     }
   if ((evp_pubkey = X509_get_pubkey (x509)) == NULL)
@@ -74,6 +87,7 @@ x509_cert_pub_key (napi_env env, napi_callback_info info)
       napi_throw_error (env, NULL, "Failed to extract public key");
       X509_free (x509);
       BIO_free (bio);
+      free (buf);
       return NULL;
     }
   if ((public_key = EVP_PKEY_get1_RSA (evp_pubkey)) == NULL)
@@ -82,6 +96,7 @@ x509_cert_pub_key (napi_env env, napi_callback_info info)
       EVP_PKEY_free (evp_pubkey);
       X509_free (x509);
       BIO_free (bio);
+      free (buf);
       return NULL;
     }
 
@@ -92,6 +107,7 @@ x509_cert_pub_key (napi_env env, napi_callback_info info)
   EVP_PKEY_free (evp_pubkey);
   X509_free (x509);
   BIO_free (bio);
+  free (buf);
 
   status |= napi_create_string_utf8 (env, n_hex, strlen (n_hex), &n_val);
   status |= napi_create_string_utf8 (env, e_hex, strlen (e_hex), &e_val);
@@ -123,7 +139,7 @@ rsa_priv_key (napi_env env, napi_callback_info info)
 {
   size_t argc = 1, size;
   napi_value argv[argc];
-  char buf[16 * 1024];
+  char *buf;
   napi_status status = napi_ok;
 
   RSA* private_key;
@@ -142,22 +158,34 @@ rsa_priv_key (napi_env env, napi_callback_info info)
       napi_throw_error (env, NULL, "This function requires one argument");
       return NULL;
     }
-  if (napi_get_value_string_utf8 (env, argv[0], buf,
-				  sizeof (buf), &size) != napi_ok)
+  if (napi_get_value_string_utf8 (env, argv[0], NULL, 0, &size) != napi_ok)
     {
       napi_throw_error (env, NULL, "Failed to parse string");
       return NULL;
     }
-
+  if ((buf = malloc (++size)) == NULL)
+    {
+      napi_throw_error (env, NULL, "Failed to allocate memory");
+      return NULL;
+    }
+  if (napi_get_value_string_utf8 (env, argv[0], buf,
+				  size, &size) != napi_ok)
+    {
+      napi_throw_error (env, NULL, "Failed to parse string");
+      free (buf);
+      return NULL;
+    }
   if ((bio = BIO_new_mem_buf (buf, size)) == NULL)
     {
       napi_throw_error (env, NULL, "Failed to copy key into buffer");
+      free (buf);
       return NULL;
     }
   if ((private_key = PEM_read_bio_RSAPrivateKey (bio, 0, 0, 0)) == NULL)
     {
       napi_throw_error (env, NULL, "Failed to read key from bio");
       BIO_free (bio);
+      free (buf);
       return NULL;
     }
 
@@ -172,6 +200,7 @@ rsa_priv_key (napi_env env, napi_callback_info info)
 
   BIO_free (bio);
   RSA_free (private_key);
+  free (buf);
 
   status |= napi_create_string_utf8 (env, n_hex, strlen (n_hex), &n_val);
   status |= napi_create_string_utf8 (env, e_hex, strlen (e_hex), &e_val);
