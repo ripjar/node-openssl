@@ -161,7 +161,7 @@ rsa_priv_key (napi_env env, napi_callback_info info)
 {
   size_t argc = 1, size;
   napi_value argv[argc];
-  char *buf, *password = NULL;
+  char *buf, *passphrase = NULL;
   napi_status status = napi_ok;
 
   RSA *private_key;
@@ -202,24 +202,24 @@ rsa_priv_key (napi_env env, napi_callback_info info)
       if (napi_get_value_string_utf8 (env, argv[1], NULL, 0, &size) !=
 	  napi_ok)
 	{
-	  napi_throw_error (env, NULL, "Failed to read password: "
-			    "make sure password is a string");
+	  napi_throw_error (env, NULL, "Failed to read passphrase: "
+			    "make sure passphrase is a string");
 	  free (buf);
 	  return NULL;
 	}
-      if ((password = malloc (++size)) == NULL)
+      if ((passphrase = malloc (++size)) == NULL)
 	{
 	  napi_throw_error (env, NULL, "Failed to allocate memory");
 	  free (buf);
 	  return NULL;
 	}
-      if (napi_get_value_string_utf8 (env, argv[1], password, size, &size) !=
+      if (napi_get_value_string_utf8 (env, argv[1], passphrase, size, &size) !=
 	  napi_ok)
 	{
-	  napi_throw_error (env, NULL, "Failed to read password: "
-			    "make sure password is a string");
+	  napi_throw_error (env, NULL, "Failed to read passphrase: "
+			    "make sure passphrase is a string");
 	  free (buf);
-	  free (password);
+	  free (passphrase);
 	  return NULL;
 	}
     }
@@ -227,19 +227,19 @@ rsa_priv_key (napi_env env, napi_callback_info info)
     {
       napi_throw_error (env, NULL, "Failed to copy key into buffer");
       free (buf);
-      if (password)
-        free (password);
+      if (passphrase)
+        free (passphrase);
       return NULL;
     }
   if ((private_key =
-       PEM_read_bio_RSAPrivateKey (bio, NULL, password ? pass_cb : NULL,
-				   password)) == NULL)
+       PEM_read_bio_RSAPrivateKey (bio, NULL, passphrase ? pass_cb : NULL,
+				   passphrase)) == NULL)
     {
       napi_throw_error (env, NULL, "Failed to read key from bio");
       BIO_free (bio);
       free (buf);
-      if (password)
-	free (password);
+      if (passphrase)
+	free (passphrase);
       return NULL;
     }
 
@@ -253,8 +253,8 @@ rsa_priv_key (napi_env env, napi_callback_info info)
       RSA_free (private_key);
       BIO_free (bio);
       free (buf);
-      if (password)
-	free (password);
+      if (passphrase)
+	free (passphrase);
       return NULL;
     }
 
@@ -270,8 +270,8 @@ rsa_priv_key (napi_env env, napi_callback_info info)
   BIO_free (bio);
   RSA_free (private_key);
   free (buf);
-  if (password)
-    free (password);
+  if (passphrase)
+    free (passphrase);
 
   status |= napi_create_string_utf8 (env, n_hex, strlen (n_hex), &n_val);
   status |= napi_create_string_utf8 (env, e_hex, strlen (e_hex), &e_val);

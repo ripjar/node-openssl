@@ -5,8 +5,7 @@
   "private": true,
   "gypfile": true,
   "scripts": {
-    "start": "node-gyp configure build && node module.js",
-    "test": "node test.js"
+    "test": "cd test && node test.js"
   },
   "engines": {
     "node" : ">=8.4.0"
