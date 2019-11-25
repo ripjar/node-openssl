@@ -163,6 +163,7 @@ rsa_priv_key (napi_env env, napi_callback_info info)
   napi_value argv[argc];
   char *buf, *passphrase = NULL;
   napi_status status = napi_ok;
+  napi_valuetype valuetype;
 
   RSA *private_key;
   BIO *bio;
@@ -198,6 +199,15 @@ rsa_priv_key (napi_env env, napi_callback_info info)
       return NULL;
     }
   if (argc > 1)
+    {
+      if (napi_typeof (env, argv[1], &valuetype) !== napi_ok)
+        {
+          napi_throw_error (env, NULL, "cannot get type of second argument");
+          free (buf);
+          return NULL;
+        }
+    }
+  if (argc > 1 && valuetype != napi_undefined && valuetype != napi_null)
     {
       if (napi_get_value_string_utf8 (env, argv[1], NULL, 0, &size) !=
 	  napi_ok)
