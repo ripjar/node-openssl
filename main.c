@@ -151,15 +151,19 @@ pass_cb (char *buf, int size, int rwflag, void *u)
   if (u == NULL)
     return -1;
 
-  strncpy (buf, u, size);
+  size_t len = strlen (u);
 
-  return strlen (buf);
+  memcpy (buf, u, len);
+
+  printf ("'%s' %d\n", buf, len);
+
+  return len;
 }
 
 static napi_value
 rsa_priv_key (napi_env env, napi_callback_info info)
 {
-  size_t argc = 1, size;
+  size_t argc = 2, size, pass_size;
   napi_value argv[argc];
   char *buf, *passphrase = NULL;
   napi_status status = napi_ok;
@@ -200,16 +204,16 @@ rsa_priv_key (napi_env env, napi_callback_info info)
     }
   if (argc > 1)
     {
-      if (napi_typeof (env, argv[1], &valuetype) !== napi_ok)
-        {
-          napi_throw_error (env, NULL, "cannot get type of second argument");
-          free (buf);
-          return NULL;
-        }
+      if (napi_typeof (env, argv[1], &valuetype) != napi_ok)
+	{
+	  napi_throw_error (env, NULL, "cannot get type of second argument");
+	  free (buf);
+	  return NULL;
+	}
     }
   if (argc > 1 && valuetype != napi_undefined && valuetype != napi_null)
     {
-      if (napi_get_value_string_utf8 (env, argv[1], NULL, 0, &size) !=
+      if (napi_get_value_string_utf8 (env, argv[1], NULL, 0, &pass_size) !=
 	  napi_ok)
 	{
 	  napi_throw_error (env, NULL, "Failed to read passphrase: "
@@ -217,19 +221,20 @@ rsa_priv_key (napi_env env, napi_callback_info info)
 	  free (buf);
 	  return NULL;
 	}
-      if ((passphrase = malloc (++size)) == NULL)
+      if ((passphrase = malloc (++pass_size)) == NULL)
 	{
 	  napi_throw_error (env, NULL, "Failed to allocate memory");
 	  free (buf);
 	  return NULL;
 	}
-      if (napi_get_value_string_utf8 (env, argv[1], passphrase, size, &size) !=
-	  napi_ok)
+      if (napi_get_value_string_utf8
+	  (env, argv[1], passphrase, pass_size, &pass_size) != napi_ok)
 	{
 	  napi_throw_error (env, NULL, "Failed to read passphrase: "
 			    "make sure passphrase is a string");
 	  free (buf);
-	  free (passphrase);
+	  if (passphrase)
+	    free (passphrase);
 	  return NULL;
 	}
     }
@@ -238,7 +243,7 @@ rsa_priv_key (napi_env env, napi_callback_info info)
       napi_throw_error (env, NULL, "Failed to copy key into buffer");
       free (buf);
       if (passphrase)
-        free (passphrase);
+	free (passphrase);
       return NULL;
     }
   if ((private_key =
