@@ -55,14 +55,14 @@ assert(result.n === mod3.toString());
 try {
   result = lib.RSAPrivateKey(key3.toString());
 } catch (e) {
-  assert(e.message.indexOf("Failed to read key") === 0);
+  assert(e.message.indexOf("Failed to read private key") === 0);
 }
 
 // check bad passphrase
 try {
   result = lib.RSAPrivateKey(key3.toString(), "badpassphrase");
 } catch (e) {
-  assert(e.message.indexOf("Failed to read key") === 0);
+  assert(e.message.indexOf("Failed to read private key") === 0);
 }
 
 // check good passphrase

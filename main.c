@@ -76,7 +76,7 @@ x509_cert_pub_key (napi_env env, napi_callback_info info)
     }
   if ((x509 = PEM_read_bio_X509 (bio, 0, 0, 0)) == NULL)
     {
-      napi_throw_error (env, NULL, "Failed to read x509 from bio");
+      napi_throw_error (env, NULL, "Failed to read x509 from BIO");
       BIO_free (bio);
       free (buf);
       return NULL;
@@ -245,7 +245,7 @@ rsa_priv_key (napi_env env, napi_callback_info info)
   if ((private_key =
        PEM_read_bio_RSAPrivateKey (bio, NULL, pass_cb, passphrase)) == NULL)
     {
-      napi_throw_error (env, NULL, "Failed to read key from bio");
+      napi_throw_error (env, NULL, "Failed to read private key from BIO");
       BIO_free (bio);
       free (buf);
       if (passphrase)
