@@ -152,11 +152,7 @@ pass_cb (char *buf, int size, int rwflag, void *u)
     return -1;
 
   size_t len = strlen (u);
-
   memcpy (buf, u, len);
-
-  printf ("'%s' %d\n", buf, len);
-
   return len;
 }
 
@@ -247,7 +243,7 @@ rsa_priv_key (napi_env env, napi_callback_info info)
       return NULL;
     }
   if ((private_key =
-       PEM_read_bio_RSAPrivateKey (bio, NULL, passphrase ? pass_cb : NULL,
+       PEM_read_bio_RSAPrivateKey (bio, NULL, pass_cb,
 				   passphrase)) == NULL)
     {
       napi_throw_error (env, NULL, "Failed to read key from bio");
@@ -338,6 +334,9 @@ static napi_value
 init (napi_env env, napi_value exports)
 {
   napi_value rsa_fn, x509_fn;
+
+  OpenSSL_add_all_algorithms();
+  OpenSSL_add_all_ciphers();
 
   if (napi_create_function (env, NULL, 0, rsa_priv_key,
 			    NULL, &rsa_fn) != napi_ok)

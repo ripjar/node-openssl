@@ -18,7 +18,7 @@ const passphrase3 = fs.readFileSync("3passphrase");
 const mod3 = fs.readFileSync("3mod");
 
 let result;
-/*
+
 // key must be string
 try {
   result = lib.RSAPrivateKey(key1);
@@ -53,19 +53,18 @@ assert(result.n === mod3.toString());
 // check modulus of third key matches modulus calculated using openssl command line
 // has passphrase, lets try without passing it in
 try {
-  //result = lib.RSAPrivateKey(key3.toString());
+  result = lib.RSAPrivateKey(key3.toString());
 } catch (e) {
-  assert(false === true);
+  assert(e.message.indexOf("Failed to read key") === 0);
 }
 
 // check bad passphrase
 try {
-  //result = lib.RSAPrivateKey(key3.toString(), "badpassphrase");
+  result = lib.RSAPrivateKey(key3.toString(), "badpassphrase");
 } catch (e) {
-  console.error(e);
-  assert(true === false);
+  assert(e.message.indexOf("Failed to read key") === 0);
 }
-*/
+
 // check good passphrase
 result = lib.RSAPrivateKey(key3.toString(), "r1pj4r");
 assert(result.n === mod3.toString());
