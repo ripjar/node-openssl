@@ -61,8 +61,7 @@ x509_cert_pub_key (napi_env env, napi_callback_info info)
       napi_throw_error (env, NULL, "Failed to allocate memory");
       return NULL;
     }
-  if (napi_get_value_string_utf8 (env, argv[0], buf,
-				  size, &size) != napi_ok)
+  if (napi_get_value_string_utf8 (env, argv[0], buf, size, &size) != napi_ok)
     {
       napi_throw_error (env, NULL, "Failed to parse string");
       free (buf);
@@ -77,7 +76,7 @@ x509_cert_pub_key (napi_env env, napi_callback_info info)
     }
   if ((x509 = PEM_read_bio_X509 (bio, 0, 0, 0)) == NULL)
     {
-      napi_throw_error (env, NULL, "Failed to read x509 from bio");
+      napi_throw_error (env, NULL, "Failed to read x509 from BIO");
       BIO_free (bio);
       free (buf);
       return NULL;
@@ -103,7 +102,7 @@ x509_cert_pub_key (napi_env env, napi_callback_info info)
   if (public_key->n == NULL || public_key->e == NULL)
     {
       napi_throw_error (env, NULL, "One or more required values in the "
-                        "public key is null");
+			"public key is null");
       RSA_free (public_key);
       EVP_PKEY_free (evp_pubkey);
       X509_free (x509);
@@ -146,17 +145,30 @@ x509_cert_pub_key (napi_env env, napi_callback_info info)
   return obj;
 }
 
+static int
+pass_cb (char *buf, int size, int rwflag, void *u)
+{
+  if (u == NULL)
+    return -1;
+
+  size_t len = strlen (u);
+  memcpy (buf, u, len > (size_t) size ? (size_t) size : len);
+  return len;
+}
+
 static napi_value
 rsa_priv_key (napi_env env, napi_callback_info info)
 {
-  size_t argc = 1, size;
+  size_t argc = 2, size, pass_size;
   napi_value argv[argc];
-  char *buf;
+  char *buf, *passphrase = NULL;
   napi_status status = napi_ok;
+  napi_valuetype valuetype;
 
-  RSA* private_key;
+  RSA *private_key;
   BIO *bio;
-  char *n_hex, *e_hex, *d_hex, *p_hex, *q_hex, *dmp1_hex, *dmq1_hex, *iqmp_hex;
+  char *n_hex, *e_hex, *d_hex, *p_hex, *q_hex, *dmp1_hex, *dmq1_hex,
+    *iqmp_hex;
   napi_value n_val, e_val, d_val, p_val, q_val, dmp1_val, dmq1_val, iqmp_val;
   napi_value obj;
 
@@ -180,24 +192,64 @@ rsa_priv_key (napi_env env, napi_callback_info info)
       napi_throw_error (env, NULL, "Failed to allocate memory");
       return NULL;
     }
-  if (napi_get_value_string_utf8 (env, argv[0], buf,
-				  size, &size) != napi_ok)
+  if (napi_get_value_string_utf8 (env, argv[0], buf, size, &size) != napi_ok)
     {
       napi_throw_error (env, NULL, "Failed to parse string");
       free (buf);
       return NULL;
     }
+  if (argc > 1)
+    {
+      if (napi_typeof (env, argv[1], &valuetype) != napi_ok)
+	{
+	  napi_throw_error (env, NULL, "cannot get type of second argument");
+	  free (buf);
+	  return NULL;
+	}
+    }
+  if (argc > 1 && valuetype != napi_undefined && valuetype != napi_null)
+    {
+      if (napi_get_value_string_utf8 (env, argv[1], NULL, 0, &pass_size) !=
+	  napi_ok)
+	{
+	  napi_throw_error (env, NULL, "Failed to read passphrase: "
+			    "make sure passphrase is a string");
+	  free (buf);
+	  return NULL;
+	}
+      if ((passphrase = malloc (++pass_size)) == NULL)
+	{
+	  napi_throw_error (env, NULL, "Failed to allocate memory");
+	  free (buf);
+	  return NULL;
+	}
+      if (napi_get_value_string_utf8
+	  (env, argv[1], passphrase, pass_size, &pass_size) != napi_ok)
+	{
+	  napi_throw_error (env, NULL, "Failed to read passphrase: "
+			    "make sure passphrase is a string");
+	  free (buf);
+	  if (passphrase)
+	    free (passphrase);
+	  return NULL;
+	}
+    }
   if ((bio = BIO_new_mem_buf (buf, size)) == NULL)
     {
       napi_throw_error (env, NULL, "Failed to copy key into buffer");
       free (buf);
+      if (passphrase)
+	free (passphrase);
       return NULL;
     }
-  if ((private_key = PEM_read_bio_RSAPrivateKey (bio, 0, 0, 0)) == NULL)
+  if ((private_key =
+       PEM_read_bio_RSAPrivateKey (bio, NULL, pass_cb, passphrase)) == NULL)
     {
-      napi_throw_error (env, NULL, "Failed to read key from bio");
+      napi_throw_error (env, NULL, "Failed to read private key from BIO");
       BIO_free (bio);
       free (buf);
+      if (passphrase)
+	free (passphrase);
       return NULL;
     }
 
@@ -207,10 +259,12 @@ rsa_priv_key (napi_env env, napi_callback_info info)
       private_key->dmq1 == NULL || private_key->iqmp == NULL)
     {
       napi_throw_error (env, NULL, "One or more required values in the "
-                        "private key is null");
+			"private key is null");
       RSA_free (private_key);
       BIO_free (bio);
       free (buf);
+      if (passphrase)
+	free (passphrase);
       return NULL;
     }
 
@@ -226,15 +280,20 @@ rsa_priv_key (napi_env env, napi_callback_info info)
   BIO_free (bio);
   RSA_free (private_key);
   free (buf);
+  if (passphrase)
+    free (passphrase);
 
   status |= napi_create_string_utf8 (env, n_hex, strlen (n_hex), &n_val);
   status |= napi_create_string_utf8 (env, e_hex, strlen (e_hex), &e_val);
   status |= napi_create_string_utf8 (env, d_hex, strlen (d_hex), &d_val);
   status |= napi_create_string_utf8 (env, p_hex, strlen (p_hex), &p_val);
   status |= napi_create_string_utf8 (env, q_hex, strlen (q_hex), &q_val);
-  status |= napi_create_string_utf8 (env, dmp1_hex, strlen (dmp1_hex), &dmp1_val);
-  status |= napi_create_string_utf8 (env, dmq1_hex, strlen (dmq1_hex), &dmq1_val);
-  status |= napi_create_string_utf8 (env, iqmp_hex, strlen (iqmp_hex), &iqmp_val);
+  status |=
+    napi_create_string_utf8 (env, dmp1_hex, strlen (dmp1_hex), &dmp1_val);
+  status |=
+    napi_create_string_utf8 (env, dmq1_hex, strlen (dmq1_hex), &dmq1_val);
+  status |=
+    napi_create_string_utf8 (env, iqmp_hex, strlen (iqmp_hex), &iqmp_val);
   status |= napi_create_object (env, &obj);
 
   free (n_hex);
@@ -271,24 +330,28 @@ rsa_priv_key (napi_env env, napi_callback_info info)
 }
 
 static napi_value
-init (napi_env env, napi_value exports) {
+init (napi_env env, napi_value exports)
+{
   napi_value rsa_fn, x509_fn;
 
+  OpenSSL_add_all_algorithms ();
+  OpenSSL_add_all_ciphers ();
+
   if (napi_create_function (env, NULL, 0, rsa_priv_key,
-                            NULL, &rsa_fn) != napi_ok)
+			    NULL, &rsa_fn) != napi_ok)
     napi_throw_error (env, NULL, "Unable to wrap native rsa function");
   if (napi_create_function (env, NULL, 0, x509_cert_pub_key,
-                            NULL, &x509_fn) != napi_ok)
+			    NULL, &x509_fn) != napi_ok)
     napi_throw_error (env, NULL, "Unable to wrap native x509 function");
 
   if (napi_set_named_property (env, exports, "RSAPrivateKey",
-                               rsa_fn) != napi_ok)
+			       rsa_fn) != napi_ok)
     napi_throw_error (env, NULL, "Unable to populate exports with rsa");
   if (napi_set_named_property (env, exports, "X509PublicKey",
-                               x509_fn) != napi_ok)
+			       x509_fn) != napi_ok)
     napi_throw_error (env, NULL, "Unable to populate exports with x509");
 
   return exports;
 }
 
-NAPI_MODULE(NODE_GYP_MODULE_NAME, init)
+NAPI_MODULE (NODE_GYP_MODULE_NAME, init)

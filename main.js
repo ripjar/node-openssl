@@ -1,1 +1,1 @@
-module.exports = require("./build/Release/node_openssl");
+module.exports = require('bindings')('node_openssl');
