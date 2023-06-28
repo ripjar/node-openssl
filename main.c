@@ -34,6 +34,9 @@ struct rsa_st {
      */
     int dummy_zero;
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    OSSL_LIB_CTX *libctx;
+#endif
     int32_t version;
     const RSA_METHOD *meth;
     /* functional reference if 'meth' is ENGINE-provided */
