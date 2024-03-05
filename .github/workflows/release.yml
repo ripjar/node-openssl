@@ -1,0 +1,84 @@
+# **What it does:** Creates a release for the library, after checking there are changes that need releasing
+# **Why we have it:** To automate the tagging the process
+# **Who does it impact:** LI Engineering teams
+
+name: Release Library
+
+run-name: ${{ github.ref_name }}/${{ github.workflow }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        type: choice
+        default: "minor"
+        description: Semantic Version
+        options:
+          - "major"
+          - "minor"
+      source_branch:
+        description: Source Branch
+        type: string
+        default: develop
+        required: true
+      base_branch:
+        description: Base Branch
+        type: string
+        default: master
+        required: true
+
+jobs:
+
+  check-component-for-changes:
+    uses: ripjar/component-workflows/.github/workflows/check-node-component-for-changes.yaml@v2
+    with:
+      component_branch: ${{ inputs.source_branch }}
+      component_base_branch: ${{ inputs.base_branch }}
+    secrets: inherit
+
+  release-component:
+    uses: ripjar/component-workflows/.github/workflows/release-node-component.yaml@v2
+    needs: [ check-component-for-changes ]
+    if: needs.check-component-for-changes.outputs.is_release_required == '1'
+    with:
+      product: LI
+      node_version: 20
+      component_branch: ${{ inputs.source_branch }}
+      component_base_branch: ${{ inputs.base_branch }}
+      release_type: ${{ inputs.release_type }}
+    secrets: inherit
+
+  extract-version:
+    runs-on: arc
+    if: always()
+    needs: [ release-component ]
+    outputs:
+      version: ${{ steps.package_version.outputs.VERSION }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ inputs.base_branch }}
+      - name: Get version from package.json
+        id: package_version
+        run: echo "::set-output name=VERSION::$(jq -r '.version' package.json)"
+        shell: bash
+
+  bump-component-version:
+    uses: ripjar/component-workflows/.github/workflows/bump-node-component-version.yaml@v2
+    needs: [ release-component ]
+    secrets: inherit
+    with: 
+      component_branch: ${{ inputs.source_branch }}
+
+  notify:
+    needs: [check-component-for-changes, release-component, extract-version, bump-component-version]
+    if: always()
+    uses: ripjar/li-ci-cd/.github/workflows/li-release-notify.yaml@develop
+    secrets: inherit
+    with:
+      repository_name: ${{ github.repository }}
+      is_release_required: ${{ needs.check-component-for-changes.outputs.is_release_required }}
+      release_result: ${{ needs.release-component.result }}
+      version: ${{ needs.extract-version.outputs.version }}
+      channel_id: 'C019Q1F40SX'
