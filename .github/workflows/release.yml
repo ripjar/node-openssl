@@ -1,0 +1,25 @@
+name: Release Library
+
+run-name: ${{ github.ref_name }}/${{ github.workflow }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        description: Source Branch
+        type: string
+        default: develop
+        required: true
+      base_branch:
+        description: Base Branch
+        type: string
+        default: master
+        required: true
+
+jobs:
+  release:
+    uses: ripjar/li-ci-cd/.github/workflows/core.release-component.yaml@develop
+    with:
+      source_branch: ${{ inputs.source_branch }}
+      base_branch: ${{ inputs.base_branch }}
+    secrets: inherit
